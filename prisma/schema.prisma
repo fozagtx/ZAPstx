@@ -1,0 +1,353 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  username      String?   @unique
+  stacksAddress String?   @unique
+  image         String?
+  bio           String?   @db.Text
+  website       String?
+  twitter       String?
+  role          UserRole  @default(USER)
+  verified      Boolean   @default(false)
+  emailVerified DateTime?
+  onboarded     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  products      Product[]
+  payments      Payment[]
+  purchases     Purchase[]
+  reviews       Review[]
+  sessions      Session[]
+  accounts      Account[]
+  widgets       Widget[]
+  notifications Notification[]
+  favorites     Favorite[]
+  
+  // Analytics
+  totalEarnings Decimal @default(0) @db.Decimal(15, 8)
+  totalSales    Int     @default(0)
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  description   String    @db.Text
+  shortDesc     String?   @db.VarChar(200)
+  price         Decimal   @db.Decimal(15, 8)
+  originalPrice Decimal?  @db.Decimal(15, 8)
+  currency      String    @default("SBTC")
+  
+  // File information
+  fileUrl       String
+  fileName      String
+  fileSize      BigInt
+  fileMimeType  String
+  previewUrl    String?
+  
+  // Media
+  imageUrl      String?
+  galleryUrls   String[]
+  videoUrl      String?
+  
+  // Categorization
+  category      String
+  subcategory   String?
+  tags          String[]
+  
+  // Status and visibility
+  status        ProductStatus @default(DRAFT)
+  featured      Boolean       @default(false)
+  trending      Boolean       @default(false)
+  
+  // Analytics
+  viewCount     Int           @default(0)
+  downloadCount Int           @default(0)
+  favoriteCount Int           @default(0)
+  
+  // Rating
+  rating        Decimal?      @db.Decimal(2, 1)
+  ratingCount   Int           @default(0)
+  
+  // SEO
+  metaTitle     String?
+  metaDesc      String?       @db.VarChar(160)
+  
+  // Timestamps
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  publishedAt   DateTime?
+  
+  // Relations
+  sellerId      String
+  seller        User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  purchases     Purchase[]
+  payments      Payment[]
+  reviews       Review[]
+  favorites     Favorite[]
+  
+  @@index([category])
+  @@index([status])
+  @@index([featured])
+  @@index([trending])
+  @@index([sellerId])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  amount        Decimal       @db.Decimal(15, 8)
+  feeAmount     Decimal       @default(0) @db.Decimal(15, 8)
+  netAmount     Decimal       @db.Decimal(15, 8)
+  currency      String        @default("SBTC")
+  description   String?
+  status        PaymentStatus @default(PENDING)
+  
+  // Blockchain data
+  txId          String?       @unique
+  blockHeight   BigInt?
+  confirmations Int           @default(0)
+  
+  // Payment link data
+  paymentLinkId String?       @unique
+  widgetId      String?
+  
+  // Metadata
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?       @db.Text
+  
+  // Timestamps
+  expiresAt     DateTime?
+  createdAt     DateTime      @default(now())
+  completedAt   DateTime?
+  
+  // Relations
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  productId     String?
+  product       Product?      @relation(fields: [productId], references: [id])
+  purchases     Purchase[]
+  
+  @@index([status])
+  @@index([userId])
+  @@index([productId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+model Purchase {
+  id            String    @id @default(cuid())
+  pricePaid     Decimal   @db.Decimal(15, 8)
+  downloadCount Int       @default(0)
+  maxDownloads  Int       @default(5)
+  
+  // Access control
+  accessToken   String    @unique @default(cuid())
+  expiresAt     DateTime?
+  
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  paymentId     String    @unique
+  payment       Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@index([accessToken])
+  @@map("purchases")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      @db.SmallInt
+  title     String?
+  comment   String?  @db.Text
+  verified  Boolean  @default(false)
+  helpful   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+model Widget {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  theme       String    @default("default")
+  customCSS   String?   @db.Text
+  settings    Json
+  active      Boolean   @default(true)
+  
+  // Usage stats
+  impressions Int       @default(0)
+  conversions Int       @default(0)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([active])
+  @@map("widgets")
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  title     String
+  message   String             @db.Text
+  type      NotificationType
+  read      Boolean            @default(false)
+  data      Json?
+  createdAt DateTime           @default(now())
+  
+  // Relations
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?  @db.Text
+  icon        String?
+  color       String?
+  active      Boolean  @default(true)
+  featured    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  
+  @@index([active])
+  @@index([featured])
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Analytics {
+  id        String      @id @default(cuid())
+  event     String
+  data      Json
+  createdAt DateTime    @default(now())
+  
+  @@index([event])
+  @@index([createdAt])
+  @@map("analytics")
+}
+
+enum UserRole {
+  USER
+  MERCHANT
+  ADMIN
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum NotificationType {
+  PAYMENT
+  PURCHASE
+  REVIEW
+  SYSTEM
+  MARKETING
+}

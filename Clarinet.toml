@@ -1,0 +1,28 @@
+[project]
+name = "sbtc-marketplace"
+version = "1.0.0"
+description = "sBTC Marketplace Smart Contracts"
+authors = ["sBTC Marketplace Team"]
+telemetry = false
+cache_dir = "./.cache"
+
+[contracts.payment-gateway]
+path = "contracts/payment-gateway.clar"
+depends_on = []
+
+[contracts.digital-products]
+path = "contracts/digital-products.clar"
+depends_on = []
+
+[repl]
+costs_version = 3
+parser_version = 2
+
+[repl.analysis]
+passes = ["check_checker"]
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false

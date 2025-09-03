@@ -1,33 +1,28 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-})
+import { StacksProvider } from "@/contexts/StacksContext"
 
 export const metadata: Metadata = {
-  title: "sBTC Marketplace - The Future of Digital Commerce",
-  description: "Buy and sell digital products with sBTC. The first marketplace built on Bitcoin's most secure L2.",
-  keywords: ["sBTC", "Bitcoin", "Digital Marketplace", "NFT", "Crypto", "Blockchain"],
-  authors: [{ name: "sBTC Marketplace" }],
-  creator: "sBTC Marketplace",
+  title: "ZapX - sBTC Payment Links & Widgets",
+  description: "Create secure payment links and embeddable widgets powered by sBTC on Stacks. Accept Bitcoin payments instantly.",
+  keywords: ["sBTC", "Bitcoin", "Payment Links", "Stacks", "Crypto Payments", "Blockchain", "Payment Widgets"],
+  authors: [{ name: "ZapX" }],
+  creator: "ZapX",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://sbtc-marketplace.com",
-    title: "sBTC Marketplace - The Future of Digital Commerce",
-    description: "Buy and sell digital products with sBTC. The first marketplace built on Bitcoin's most secure L2.",
-    siteName: "sBTC Marketplace",
+    url: "https://zapx.dev",
+    title: "ZapX - sBTC Payment Links & Widgets",
+    description: "Create secure payment links and embeddable widgets powered by sBTC on Stacks. Accept Bitcoin payments instantly.",
+    siteName: "ZapX",
   },
   twitter: {
     card: "summary_large_image",
-    title: "sBTC Marketplace - The Future of Digital Commerce",
-    description: "Buy and sell digital products with sBTC. The first marketplace built on Bitcoin's most secure L2.",
-    creator: "@sbtcmarketplace",
+    title: "ZapX - sBTC Payment Links & Widgets",
+    description: "Create secure payment links and embeddable widgets powered by sBTC on Stacks. Accept Bitcoin payments instantly.",
+    creator: "@zapx_dev",
   },
   robots: {
     index: true,
@@ -40,9 +35,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    google: "your-google-verification-code",
-  },
 }
 
 export default function RootLayout({
@@ -52,16 +44,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster />
-        </ThemeProvider>
+      <body className="font-sans antialiased">
+        <StacksProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </StacksProvider>
       </body>
     </html>
   )

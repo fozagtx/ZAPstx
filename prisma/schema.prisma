@@ -12,15 +12,14 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
+  email         String?   @unique
   name          String?
   username      String?   @unique
-  stacksAddress String?   @unique
+  stacksAddress String    @unique
   image         String?
   bio           String?   @db.Text
   website       String?
   twitter       String?
-  role          UserRole  @default(USER)
   verified      Boolean   @default(false)
   emailVerified DateTime?
   onboarded     Boolean   @default(false)
@@ -28,118 +27,16 @@ model User {
   updatedAt     DateTime  @updatedAt
   
   // Relations
-  products      Product[]
   payments      Payment[]
-  purchases     Purchase[]
-  reviews       Review[]
-  sessions      Session[]
-  accounts      Account[]
+  paymentLinks  PaymentLink[]
   widgets       Widget[]
   notifications Notification[]
-  favorites     Favorite[]
   
   // Analytics
   totalEarnings Decimal @default(0) @db.Decimal(15, 8)
-  totalSales    Int     @default(0)
+  totalPayments Int     @default(0)
   
-  @@map("users")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model Product {
-  id            String    @id @default(cuid())
-  title         String
-  slug          String    @unique
-  description   String    @db.Text
-  shortDesc     String?   @db.VarChar(200)
-  price         Decimal   @db.Decimal(15, 8)
-  originalPrice Decimal?  @db.Decimal(15, 8)
-  currency      String    @default("SBTC")
-  
-  // File information
-  fileUrl       String
-  fileName      String
-  fileSize      BigInt
-  fileMimeType  String
-  previewUrl    String?
-  
-  // Media
-  imageUrl      String?
-  galleryUrls   String[]
-  videoUrl      String?
-  
-  // Categorization
-  category      String
-  subcategory   String?
-  tags          String[]
-  
-  // Status and visibility
-  status        ProductStatus @default(DRAFT)
-  featured      Boolean       @default(false)
-  trending      Boolean       @default(false)
-  
-  // Analytics
-  viewCount     Int           @default(0)
-  downloadCount Int           @default(0)
-  favoriteCount Int           @default(0)
-  
-  // Rating
-  rating        Decimal?      @db.Decimal(2, 1)
-  ratingCount   Int           @default(0)
-  
-  // SEO
-  metaTitle     String?
-  metaDesc      String?       @db.VarChar(160)
-  
-  // Timestamps
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  publishedAt   DateTime?
-  
-  // Relations
-  sellerId      String
-  seller        User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  purchases     Purchase[]
-  payments      Payment[]
-  reviews       Review[]
-  favorites     Favorite[]
-  
-  @@index([category])
-  @@index([status])
-  @@index([featured])
-  @@index([trending])
-  @@index([sellerId])
-  @@index([createdAt])
-  @@map("products")
+  @@map("zapx_users")
 }
 
 model Payment {
@@ -155,9 +52,12 @@ model Payment {
   txId          String?       @unique
   blockHeight   BigInt?
   confirmations Int           @default(0)
+  fromAddress   String?
+  toAddress     String?
   
   // Payment link data
-  paymentLinkId String?       @unique
+  paymentLinkId String?
+  paymentLink   PaymentLink?  @relation(fields: [paymentLinkId], references: [id])
   widgetId      String?
   
   // Metadata
@@ -173,79 +73,59 @@ model Payment {
   // Relations
   userId        String?
   user          User?         @relation(fields: [userId], references: [id])
-  productId     String?
-  product       Product?      @relation(fields: [productId], references: [id])
-  purchases     Purchase[]
   
   @@index([status])
   @@index([userId])
-  @@index([productId])
+  @@index([paymentLinkId])
+  @@index([txId])
   @@index([createdAt])
-  @@map("payments")
+  @@map("zapx_payments")
 }
 
-model Purchase {
-  id            String    @id @default(cuid())
-  pricePaid     Decimal   @db.Decimal(15, 8)
-  downloadCount Int       @default(0)
-  maxDownloads  Int       @default(5)
+model PaymentLink {
+  id          String            @id @default(cuid())
+  title       String
+  description String?           @db.Text
+  amount      Decimal           @db.Decimal(15, 8)
+  currency    String            @default("SBTC")
+  slug        String            @unique
   
-  // Access control
-  accessToken   String    @unique @default(cuid())
-  expiresAt     DateTime?
+  // Configuration
+  active      Boolean           @default(true)
+  expiresAt   DateTime?
+  maxUses     Int?
+  currentUses Int               @default(0)
   
-  createdAt     DateTime  @default(now())
+  // Customization
+  theme       String            @default("default")
+  customCSS   String?           @db.Text
+  logoUrl     String?
+  
+  // Webhook settings
+  webhookUrl  String?
+  webhookSecret String?
+  
+  // Success/redirect settings
+  successUrl    String?
+  successMessage String?        @db.Text
+  
+  // Analytics
+  viewCount     Int             @default(0)
+  conversionRate Decimal?       @default(0) @db.Decimal(5, 4)
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   
   // Relations
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId     String
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  paymentId     String    @unique
-  payment       Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments    Payment[]
   
-  @@unique([userId, productId])
   @@index([userId])
-  @@index([productId])
-  @@index([accessToken])
-  @@map("purchases")
-}
-
-model Review {
-  id        String   @id @default(cuid())
-  rating    Int      @db.SmallInt
-  title     String?
-  comment   String?  @db.Text
-  verified  Boolean  @default(false)
-  helpful   Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, productId])
-  @@index([productId])
-  @@index([rating])
-  @@map("reviews")
-}
-
-model Favorite {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  
-  // Relations
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, productId])
-  @@index([userId])
-  @@map("favorites")
+  @@index([active])
+  @@index([slug])
+  @@index([createdAt])
+  @@map("zapx_payment_links")
 }
 
 model Widget {
@@ -256,6 +136,10 @@ model Widget {
   customCSS   String?   @db.Text
   settings    Json
   active      Boolean   @default(true)
+  
+  // Configuration for embedded widgets
+  allowedOrigins String[] @default([])
+  rateLimit     Int?     @default(100) // requests per hour
   
   // Usage stats
   impressions Int       @default(0)
@@ -270,7 +154,7 @@ model Widget {
   
   @@index([userId])
   @@index([active])
-  @@map("widgets")
+  @@map("zapx_widgets")
 }
 
 model Notification {
@@ -289,25 +173,7 @@ model Notification {
   @@index([userId])
   @@index([read])
   @@index([createdAt])
-  @@map("notifications")
-}
-
-model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
-  icon        String?
-  color       String?
-  active      Boolean  @default(true)
-  featured    Boolean  @default(false)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  
-  @@index([active])
-  @@index([featured])
-  @@index([sortOrder])
-  @@map("categories")
+  @@map("zapx_notifications")
 }
 
 model Analytics {
@@ -318,20 +184,31 @@ model Analytics {
   
   @@index([event])
   @@index([createdAt])
-  @@map("analytics")
+  @@map("zapx_analytics")
 }
 
-enum UserRole {
-  USER
-  MERCHANT
-  ADMIN
-}
-
-enum ProductStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-  DELETED
+// Transaction monitoring for real-time processing
+model Transaction {
+  id            String              @id @default(cuid())
+  txId          String              @unique
+  status        TransactionStatus   @default(PENDING)
+  amount        Decimal             @db.Decimal(15, 8)
+  fromAddress   String
+  toAddress     String
+  blockHeight   BigInt?
+  confirmations Int                 @default(0)
+  
+  // Metadata
+  rawTxData     Json?
+  
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  @@index([txId])
+  @@index([status])
+  @@index([toAddress])
+  @@index([blockHeight])
+  @@map("zapx_transactions")
 }
 
 enum PaymentStatus {
@@ -344,10 +221,14 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
 enum NotificationType {
   PAYMENT
-  PURCHASE
-  REVIEW
   SYSTEM
-  MARKETING
+  WEBHOOK
 }

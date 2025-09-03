@@ -16,18 +16,10 @@ const variants = {
   animate: {
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0.25, 0.46, 0.45, 0.94],
-    },
   },
   exit: {
     opacity: 0,
     y: -20,
-    transition: {
-      duration: 0.3,
-      ease: [0.25, 0.46, 0.45, 0.94],
-    },
   },
 }
 
@@ -39,6 +31,10 @@ export function PageTransition({ children, className = "" }: PageTransitionProps
       initial="initial"
       animate="animate"
       exit="exit"
+      transition={{
+        duration: 0.4,
+        ease: "easeOut",
+      }}
     >
       {children}
     </motion.div>
@@ -64,7 +60,7 @@ export function FadeIn({
       transition={{
         duration,
         delay,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: "easeOut",
       }}
     >
       {children}
@@ -89,7 +85,7 @@ export function SlideUp({
       transition={{
         duration: 0.6,
         delay,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: "easeOut",
       }}
     >
       {children}
